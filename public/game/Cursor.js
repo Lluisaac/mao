@@ -8,6 +8,7 @@ class Cursor extends DisplayedEntity {
 		this.dom.style.overflowX = "hidden";
 		this.dom.style.overflowY = "hidden";
 		this.dom.style.position = "absolute";
+		this.dom.style.userSelect= "none";
 		this.dom.style.border = "solid";
 		this.dom.style.borderWidth = "thin";
 		this.dom.style.borderRadius = "50%";
@@ -18,11 +19,13 @@ class Cursor extends DisplayedEntity {
 		
 		document.body.appendChild(this.dom);
 		
-		this.setX(0);
-		this.setY(0);
+		this.setX(-100);
+		this.setY(-100);
 		this.setWidth(Cursor.size);
 		this.setHeight(Cursor.size);
 		this.setDepth(75);
+		
+		this.hidden = false;
 	}
 	
 	static size = 16;
@@ -31,5 +34,16 @@ class Cursor extends DisplayedEntity {
 	{
 		this.setX(x - (Cursor.size / 2));
 		this.setY(y - (Cursor.size / 2));
+		
+		if (this.collideWithEntity(this.getState().hand) && !this.hidden)
+		{
+			this.hidden = true;
+			this.dom.style.visibility = "hidden";
+		}
+		else if (!this.collideWithEntity(this.getState().hand) && this.hidden)
+		{
+			this.hidden = false;
+			this.dom.style.visibility = "visible";
+		}
 	}
 }

@@ -5,9 +5,9 @@ const app = Express();
 
 app.use(Express.static('public'));
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
 	fs.readFile("index.html", (error, data) => {
-		res.writeHead(200, {'Content-Type': 'text/html'})
+		res.writeHead(200, {"Content-Type": "text/html"})
 		res.write(data);
 		res.end();
 	});

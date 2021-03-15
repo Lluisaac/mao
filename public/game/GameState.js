@@ -1,6 +1,7 @@
 class GameState extends BasicState
 {
 	static COLLISION_PERCENT_MIN = 20;
+	static CURSOR_UPDATE_FREQUENCY = 2;
 
 	constructor()
 	{
@@ -14,7 +15,11 @@ class GameState extends BasicState
 		this.piles = [];
 		this.cards = [];
 		this.zones = {};
+		
 		this.cursors = {};
+		this.myCursor = {x: -100, y: -100};
+		this.cursorTimer = 0;
+		this.cursorMoved = false;
 		
 		this.changes = [];
 		this.changeId = 0;
@@ -33,9 +38,16 @@ class GameState extends BasicState
 		this.buildMenu();
 		this.buildSession(session);
 		
-		socket.on("update", (changes) => {
-			this.updateSession(changes);
+		socket.on("update", (change) => {
+			this.updateSession(change);
+		});
+		
+		socket.on("isAlive", (nothing) => {
 			socket.emit("stillAlive", this.idPlayer);
+		});
+		
+		socket.on("denied", (id) => {
+			this.rollbackTo(id);
 		});
 		
 		socket.on("playerJoin", (id) => {
@@ -104,96 +116,97 @@ class GameState extends BasicState
 		}
 	}
 	
-	updateSession(allChanges) 
+	updateSession(change) 
 	{
-		if (allChanges.length > 0)
+		if (change.length > 0)
 		{
 			//console.log(allChanges);
 		}
 		
-		if (this.isThereLocalChangeToRevert(allChanges))
+		if (change.player != this.idPlayer && change.denied != true) 
 		{
-			this.revertLocalChanges();
-			this.applyAllChanges(allChanges, true);
-		}
-		else
+			this.applyChange(change);
+		} 
+		else if (change.player == this.idPlayer && change.denied != true)
 		{
-			this.applyAllChanges(allChanges, false);
-		}
-		
-		this.clearChanges();
-	}
-	
-	isThereLocalChangeToRevert(allChanges)
-	{
-		for (let change of this.changes)
-		{
-			if (change.player == this.idPlayer && !this.isChangeIn(change.id, allChanges))
+			if (this.isChangeInList(change.id))
 			{
-				return true;
+				this.removeChange(change.id)
+			}
+			else
+			{
+				this.applyChange(change);
 			}
 		}
-		
-		for (let change of allChanges)
-		{
-			if (change.player == this.idPlayer && !this.isChangeIn(change.id, this.changes))
-			{
-				return true;
-			}
-		}
-		
-		return false;
 	}
 	
-	isChangeIn(id, changes)
+	getChangeIndex(id)
 	{
-		for (let change of changes)
+		for (let i = 0; i < this.changes.length; i++)
 		{
+			let change = this.changes[i];
+			
 			if (change.player == this.idPlayer && change.id == id)
 			{
-				return true;
+				return i;
 			}
 		}
 		
-		return false;
+		return -1;
 	}
 	
-	revertLocalChanges()
+	isChangeInList(id)
 	{
-		//console.log("Reverted !");
+		return this.getChangeIndex(id) != -1;
+	}
+	
+	removeChange(id)
+	{
+		let index = this.getChangeIndex(id);
 		
-		this.changes.reverse();
-		
-		for (let change of this.changes)
-			{
-				switch (change.name)
-				{
-					case "pileToSelect":
-						this.revertPileToSelect(change);
-						break;
-					case "handToSelect":
-						this.revertHandToSelect(change);
-						break;
-					case "selectToHand":
-						this.revertSelectToHand(change);
-						break;
-					case "selectToPile":
-						this.revertSelectToPile(change);
-						break;
-					case "selectToNewPile":
-						this.revertSelectToNewPile(change);
-						break;
-					case "pickupPile":
-						this.revertPickupPile(change);
-						break;
-					case "putDownPile":
-						this.revertPutDownPile(change);
-						break;
-					case "fusionPile":
-						this.revertFusionPile(change);
-						break;
-				}
-			}
+		if (index != -1)
+		{
+			this.changes.splice(index, 1);
+		}
+	}
+	
+	rollbackTo(id)
+	{
+		while(this.isChangeInList(id))
+		{
+			this.changes.pop();
+		}
+	}
+	
+	revertChange(change)
+	{
+		switch (change.name)
+		{
+			case "pileToSelect":
+				this.revertPileToSelect(change);
+				break;
+			case "handToSelect":
+				this.revertHandToSelect(change);
+				break;
+			case "selectToHand":
+				this.revertSelectToHand(change);
+				break;
+			case "selectToPile":
+				this.revertSelectToPile(change);
+				break;
+			case "selectToNewPile":
+				this.revertSelectToNewPile(change);
+				break;
+			case "pickupPile":
+				this.revertPickupPile(change);
+				break;
+			case "putDownPile":
+				this.revertPutDownPile(change);
+				break;
+			case "fusionPile":
+				this.revertFusionPile(change);
+				break;
+		}
 	}
 	
 	applyAllChanges(allChanges, doLocalChanges)
@@ -202,46 +215,54 @@ class GameState extends BasicState
 		{
 			if (doLocalChanges || change.player != this.idPlayer)
 			{
-				switch (change.name)
-				{
-					case "pileToSelect":
-						this.applyPileToSelect(change);
-						break;
-					case "handToSelect":
-						this.applyHandToSelect(change);
-						break;
-					case "selectToHand":
-						this.applySelectToHand(change);
-						break;
-					case "selectToPile":
-						this.applySelectToPile(change);
-						break;
-					case "selectToNewPile":
-						this.applySelectToNewPile(change);
-						break;
-					case "shufflePile":
-						this.applyShufflePile(change);
-						break;
-					case "flipPile":
-						this.applyFlipPile(change);
-						break;
-					case "pickupPile":
-						this.applyPickupPile(change);
-						break;
-					case "putDownPile":
-						this.applyPutDownPile(change);
-						break;
-					case "fusionPile":
-						this.applyFusionPile(change);
-						break;
-					case "buildPile":
-						this.applyBuildPile(change);
-						break;
-					case "kickPlayer":
-						this.applyKickPlayer(change);
-						break;
-				}
+				applyChange(change);
 			}
+		}
+	}
+	
+	applyChange(change)
+	{
+		switch (change.name)
+		{
+			case "pileToSelect":
+				this.applyPileToSelect(change);
+				break;
+			case "handToSelect":
+				this.applyHandToSelect(change);
+				break;
+			case "selectToHand":
+				this.applySelectToHand(change);
+				break;
+			case "selectToPile":
+				this.applySelectToPile(change);
+				break;
+			case "selectToNewPile":
+				this.applySelectToNewPile(change);
+				break;
+			case "shufflePile":
+				this.applyShufflePile(change);
+				break;
+			case "flipPile":
+				this.applyFlipPile(change);
+				break;
+			case "pickupPile":
+				this.applyPickupPile(change);
+				break;
+			case "putDownPile":
+				this.applyPutDownPile(change);
+				break;
+			case "fusionPile":
+				this.applyFusionPile(change);
+				break;
+			case "buildPile":
+				this.applyBuildPile(change);
+				break;
+			case "kickPlayer":
+				this.applyKickPlayer(change);
+				break;
+			case "deletePile":
+				this.applyDeletePile(change);
+				break;
 		}
 	}
 	
@@ -541,6 +562,17 @@ class GameState extends BasicState
 		PlayerZone.nbOfPlayers--;
 	}
 	
+	applyDeletePile(change)
+	{
+		let pile = this.getPile(change.destination);
+		this.removePile(pile);
+		
+		for (let card of pile.cards)
+		{
+			this.removeCard(card);
+		}
+	}
+	
 	unselect()
 	{
 		if (this.selectedElement != null)
@@ -636,6 +668,11 @@ class GameState extends BasicState
 		
 		li = document.createElement("li");
 		t = document.createTextNode("Appuyez sur F avec le curseur au dessus d'une pile pour la retourner.");
+		li.appendChild(t);
+		list.appendChild(li);
+		
+		li = document.createElement("li");
+		t = document.createTextNode("Appuyez sur Shift + R avec le curseur au dessus d'une pile pour la supprimer avec tout son contenu.");
 		li.appendChild(t);
 		list.appendChild(li);
 		
@@ -850,6 +887,15 @@ class GameState extends BasicState
 		return null;
 	}
 	
+	removeCard(card) 
+	{
+		card.dom.remove();
+		
+		let index = this.cards.indexOf(card);
+		
+		this.cards.splice(index, 1);
+	}
+	
 	getPile(id) 
 	{		
 		for (let pile of this.piles) {
@@ -964,6 +1010,19 @@ class GameState extends BasicState
 		for (let pile of this.piles) {
 			pile.update();
 		}
+		
+		this.cursorTimer++;
+		
+		if (this.cursorTimer == GameState.CURSOR_UPDATE_FREQUENCY)
+		{
+			if (this.cursorMoved)
+			{
+				socket.emit("cursorMove", {id: this.idPlayer, x: this.myCursor.x, y: this.myCursor.y});
+				this.cursorMoved = false;
+			}
+			
+			this.cursorTimer = 0;
+		}
 	}
 	
 	addChange(name, source, destination, object, isLocal) {
@@ -975,11 +1034,6 @@ class GameState extends BasicState
 		}
 		
 		socket.emit("change", change);
-	}
-	
-	clearChanges() 
-	{
-		this.changes = [];
 	}
 	
 	keyPressed(event)
@@ -1013,6 +1067,13 @@ class GameState extends BasicState
 					pile.pickup();
 				}
 				break;
+			//R key
+			case 82:
+				if (pile != null && event.shiftKey)
+				{
+					this.addChange("deletePile", undefined, pile.id, undefined, false);
+				}
+				break;
 		}
 	}
 	
@@ -1029,6 +1090,7 @@ class GameState extends BasicState
 	
 	doCursorMove(event)
 	{
-		socket.emit("cursorMove", {id: this.idPlayer, x: event.clientX, y: event.clientY});
+		this.myCursor = {x: event.clientX, y: event.clientY};
+		this.cursorMoved = true;
 	}
 }

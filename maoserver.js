@@ -7,10 +7,9 @@ var step = 0;
 function updateClients() {
 	checkForDisconnected.bind(this)();
 	
-	this.emit("update", session.playerChanges);
-	session.clearChanges();
+	this.emit("isAlive");
 	
-	setTimeout(updateClients.bind(this), 500);
+	setTimeout(updateClients.bind(this), 2500);
 	
 	step++;
 	
@@ -35,7 +34,7 @@ exports.launch = function(app) {
 				
 				console.log(id + " is connected");
 				
-				client.emit("init", session);
+				client.emit("init", session.getCopy());
 				socket.emit("playerJoin", id);
 				
 				clients[id].step = step;
@@ -64,9 +63,14 @@ exports.launch = function(app) {
 		});
 	
 		client.on("cursorMove", (info) => {
-			socket.emit("cursorMove", info);
+			if (info.id in clients)
+			{
+				socket.emit("cursorMove", info);
+			}
 		});
 	});
+	
+	session.addSocket(socket, clients);
 	
 	setTimeout(updateClients.bind(socket), 1000);
 }
@@ -75,7 +79,7 @@ function checkForDisconnected()
 {
 	for (let id in clients)
 	{
-		if (clients[id].step + 10 <= step && clients[id].step != -100)
+		if (clients[id].step + 2 <= step && clients[id].step != -100)
 		{			
 			this.emit("playerLeft", id);
 			clients[id].step = -100;

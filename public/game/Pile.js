@@ -3,7 +3,7 @@ class Pile extends DisplayedEntity {
 		super(owningState);
 		
 		this.id = id;
-		this.name = name;
+		this.name = name == "" ? undefined : name;
 		this.isFaceUp = isFaceUp;
 		
 		this.isMouseHovering = false;
@@ -52,7 +52,7 @@ class Pile extends DisplayedEntity {
 		this.dom.appendChild(this.image);
 		
 		this.setX(x);
-		this.setY(y);
+		this.setY(y + Pile.offsetY);
 		
 		this.image.addEventListener("mousedown", this.takeCard.bind(this));
 		
@@ -112,7 +112,7 @@ class Pile extends DisplayedEntity {
 	updateDraggingCoord() 
 	{
 		this.setX(this.mouseX - (Card.width / 2));
-		this.setY(this.mouseY - (Card.height / 2));
+		this.setY(this.mouseY - (Card.height / 2) + Pile.borderWidth + Pile.offsetY);
 	}
 	
 	doDragUpdate(event) 
@@ -256,6 +256,8 @@ class Pile extends DisplayedEntity {
 			this.cards.push(card);
 		}
 		
+		pile.cards = new Array();
+		
 		if (flipped)
 		{
 			pile.flip();
@@ -354,9 +356,8 @@ class Pile extends DisplayedEntity {
 		}
 		else
 		{
-			this.clear();
 			this.setX(this.originalX + Pile.offsetX);
-			this.setY(this.originalY);
+			this.setY(this.originalY + Pile.borderWidth + Pile.offsetY);
 		}
 	}
 	
@@ -381,7 +382,7 @@ class Pile extends DisplayedEntity {
 	
 	getCardY()
 	{
-		return this.getY();
+		return this.getY() + Pile.borderWidth + Pile.offsetY;
 	}
 	
 	setX(x)
@@ -391,6 +392,6 @@ class Pile extends DisplayedEntity {
 	
 	setY(y)
 	{
-		super.setY(y - Pile.borderWidth);
+		super.setY(y - Pile.borderWidth - Pile.offsetY);
 	}
 }

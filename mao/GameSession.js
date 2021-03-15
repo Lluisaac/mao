@@ -26,6 +26,17 @@ module.exports = class GameSession
 	
 	static MAX_PLAYERS = 9;
 	
+	getCopy()
+	{
+		return {idSession: this.idSession, cards: this.cards, players: this.players, piles: this.piles, maxId: this.maxId, nbPlayers: this.nbPlayers};
+	}
+	
+	addSocket(socket, clients)
+	{
+		this.socket = socket;
+		this.clients = clients;
+	}
+	
 	getRandomInt() 
 	{
 		return Math.round(Math.random() * this.maxId);
@@ -99,6 +110,18 @@ module.exports = class GameSession
 		return null;
 	}
 	
+	removeCard(id)
+	{
+		for (let i = 0; i < this.cards.length; i++) 
+		{
+			if (this.cards[i].id == id) 
+			{
+				this.cards.splice(i, 1);
+				i--;
+			}
+		}
+	}
+	
 	getPile(id) 
 	{		
 		for (let pile of this.piles) 
@@ -122,20 +145,19 @@ module.exports = class GameSession
 				i--;
 			}
 		}
-		
 	}
 	
-	addChange(change)
+	sendChange(change)
 	{			
 		if (change.player == undefined || change.player in this.players)
 		{
-			this.playerChanges.push(change);
+			this.socket.emit("update", change);
 		}
 	}
 	
-	clearChanges()
+	deny(idPlayer, idChange)
 	{
-		this.playerChanges = new Array();
+		this.clients[idPlayer].emit("denied", {id: idChange});
 	}
 	
 	updateWith(change) 
@@ -180,6 +202,9 @@ module.exports = class GameSession
 			case "kickPlayer":
 				this.applyKickPlayer(change);
 				break;
+			case "deletePile":
+				this.applyDeletePile(change);
+				break;
 		}
 	}
 	
@@ -205,7 +230,11 @@ module.exports = class GameSession
 				}
 			}
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -218,7 +247,11 @@ module.exports = class GameSession
 			player.selected = this.getCard(change.object);
 			player.removeCardFromHand(change.object);
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -231,7 +264,11 @@ module.exports = class GameSession
 			player.selected = undefined;
 			player.hand.splice(change.destination, 0, this.getCard(change.object));
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -245,7 +282,11 @@ module.exports = class GameSession
 			player.selected = undefined;
 			pile.cards.push(this.getCard(change.object));
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -266,7 +307,11 @@ module.exports = class GameSession
 			pile.x = change.destination.x;
 			pile.y = change.destination.y;
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -285,7 +330,7 @@ module.exports = class GameSession
 				cards.push(card.id);
 			}
 			
-			this.addChange({name: "shufflePile", destination: change.destination, object: cards});
+			this.sendChange({name: "shufflePile", destination: change.destination, object: cards});
 		}
 	}
 	
@@ -297,7 +342,7 @@ module.exports = class GameSession
 		{
 			pile.flip();
 			
-			this.addChange({name: "flipPile", destination: change.destination});
+			this.sendChange({name: "flipPile", destination: change.destination});
 		}
 	}
 	
@@ -310,7 +355,11 @@ module.exports = class GameSession
 		{
 			player.selected = pile;
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -326,7 +375,11 @@ module.exports = class GameSession
 			pile.x = change.object.x;
 			pile.y = change.object.y;
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -351,7 +404,11 @@ module.exports = class GameSession
 				pileSource.clear();
 			}
 			
-			this.addChange(change);
+			this.sendChange(change);
+		}
+		else
+		{
+			this.deny(change.player, change.id);
 		}
 	}
 	
@@ -380,7 +437,7 @@ module.exports = class GameSession
 				}
 			}
 			
-			this.addChange({name: "buildPile", destination: {id: change.destination.id, x: newPile.x, y: newPile.y, name: change.destination.name}, object: cards});
+			this.sendChange({name: "buildPile", destination: {id: change.destination.id, x: newPile.x, y: newPile.y, name: change.destination.name}, object: cards});
 		}
 	}
 	
@@ -452,7 +509,7 @@ module.exports = class GameSession
 			delete this.players[player.id];
 			this.nbPlayers--;
 				
-			this.addChange({name: "kickPlayer", destination: change.destination});
+			this.sendChange({name: "kickPlayer", destination: change.destination});
 			
 			if (player.hand.length > 0 || player.selected != undefined)
 			{
@@ -467,8 +524,25 @@ module.exports = class GameSession
 					newPile.cards.push(card);
 				}
 			
-				this.addChange({name: "buildPile", destination: {id: newPile.id, x: newPile.x, y: newPile.y}, object: cards});
+				this.sendChange({name: "buildPile", destination: {id: newPile.id, x: newPile.x, y: newPile.y}, object: cards});
 			}
+		}
+	}
+	
+	applyDeletePile(change)
+	{		
+		let pile = this.getPile(change.destination);
+		
+		if (pile != null) 
+		{			
+			this.removePile(pile.id);
+			
+			for (let card of pile.cards)
+			{
+				this.removeCard(card.id);
+			}
+			
+			this.sendChange({name: "deletePile", destination: pile.id, object: pile.cards});
 		}
 	}
 }
