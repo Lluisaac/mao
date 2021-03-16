@@ -82,6 +82,16 @@ class Card extends TexturedEntity
 		{
 			this.updateDraggingCoord();
 		}
+		
+		if (this.borderCountdown == 0)
+		{
+			this.removeBorder();
+			this.borderCountdown--;
+		}
+		
+		if (this.borderCountdown >= 0) {
+			this.borderCountdown--;
+		}
 	}
 	
 	flip()
@@ -164,9 +174,9 @@ class Card extends TexturedEntity
 			
 			if (pile == null) 
 			{
-				pile = this.getState().addPile(Random.getRandomId(), undefined, this.isFaceUp, this.getX(), this.getY());
+				pile = this.getState().addPile(Random.getRandomId(), undefined, this.isFaceUp, this.getX(), this.getY() + Pile.offsetY);
 				pile.addCard(this);
-				this.getState().addChange("selectToNewPile", "selection", {id: pile.id, x: this.getX(), y: this.getY(), isFaceUp: this.isFaceUp}, this.id, true);
+				this.getState().addChange("selectToNewPile", "selection", {id: pile.id, x: this.getX(), y: this.getY() + Pile.offsetY, isFaceUp: this.isFaceUp}, this.id, true);
 			} 
 			else 
 			{
@@ -214,5 +224,41 @@ class Card extends TexturedEntity
 		{
 			return this.y + this.hand.getY();
 		}
+	}
+	
+	getCenteredX()
+	{
+		return this.getX() + (Card.width / 2);
+	}
+	
+	getCenteredY()
+	{
+		return this.getY() + (Card.height / 2);
+	}
+	
+	setCenteredX(x)
+	{
+		this.setX(x - (Card.width / 2));
+	}
+	
+	setCenteredY(y)
+	{
+		this.setY(y - (Card.height / 2));
+	}
+	
+	putBorder(id, length)
+	{		
+		let color = new Random(id).generateColor();
+		
+		this.dom.style.boxShadow = "0px 0px " + Pile.borderWidth + "px " + (Pile.borderWidth / 2) + "px rgb(" + color.r + ", " + color.g + ", " + color.b + ")";
+		this.dom.style.backgroundColor = "rgb(" + color.r + ", " + color.g + ", " + color.b + ")";
+		
+		this.borderCountdown = length == undefined ? 50 : length;
+	}
+	
+	removeBorder()
+	{
+		this.dom.style.boxShadow = "none";
+		this.dom.style.backgroundColor = "transparent";
 	}
 }

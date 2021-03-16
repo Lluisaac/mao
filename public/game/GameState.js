@@ -281,6 +281,7 @@ class GameState extends BasicState
 		else
 		{
 			pile.putBorder(change.player);
+			this.selectOther(change.player, card);
 		}
 	}
 	
@@ -312,6 +313,10 @@ class GameState extends BasicState
 			this.unselect();
 			this.changeSelect(card);
 		}
+		else
+		{
+			this.selectOther(change.player, card);
+		}
 		
 		this.zones[change.player].addNbCards(-1);
 	}
@@ -336,6 +341,10 @@ class GameState extends BasicState
 			this.hand.addCard(card, change.destination);
 			
 			this.unselect();
+		}
+		else
+		{
+			this.unselectOther(change.player);
 		}
 		
 		this.zones[change.player].addNbCards(1);
@@ -367,6 +376,7 @@ class GameState extends BasicState
 		else
 		{
 			pile.putBorder(change.player);
+			this.unselectOther(change.player);
 		}
 	}
 	
@@ -400,6 +410,7 @@ class GameState extends BasicState
 		else
 		{
 			pile.putBorder(change.player);
+			this.unselectOther(change.player);
 		}
 	}
 	
@@ -432,11 +443,16 @@ class GameState extends BasicState
 	
 	applyPickupPile(change)
 	{
+		let pile = this.getPile(change.source);
+			
 		if (change.player == this.idPlayer)
 		{
-			let pile = this.getPile(change.source);
-			
 			this.changeSelect(pile);
+		}
+		else
+		{
+			pile.savePos();
+			this.selectOther(change.player, pile);
 		}
 	}
 	
@@ -464,6 +480,7 @@ class GameState extends BasicState
 		else
 		{
 			pile.putBorder(change.player);
+			this.unselectOther(change.player);
 		}
 	}
 	
@@ -489,6 +506,8 @@ class GameState extends BasicState
 		else
 		{
 			pileDest.putBorder(change.player);
+			this.unselectOther(change.player);
+			pileDest.putBack();
 		}
 	}
 	
@@ -584,7 +603,7 @@ class GameState extends BasicState
 	changeSelect(element)
 	{
 		document.body.appendChild(element.dom);
-		element.dragStart({clientX: element.getX() + (Card.width / 2), clientY: element.getY() + (Card.height / 2)});
+		element.dragStart({clientX: element.getCenteredX(), clientY: element.getCenteredY()});
 		this.selectedElement = element;
 	}
 	
@@ -1092,5 +1111,16 @@ class GameState extends BasicState
 	{
 		this.myCursor = {x: event.clientX, y: event.clientY};
 		this.cursorMoved = true;
+	}
+	
+	unselectOther(id)
+	{
+		this.cursors[id].unselectOther();
+	}
+	
+	selectOther(id, element)
+	{
+		this.cursors[id].selectOther(element);
+		element.putBorder(id, -1);
 	}
 }

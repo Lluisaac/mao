@@ -52,7 +52,7 @@ class Pile extends DisplayedEntity {
 		this.dom.appendChild(this.image);
 		
 		this.setX(x);
-		this.setY(y + Pile.offsetY);
+		this.setY(y);
 		
 		this.image.addEventListener("mousedown", this.takeCard.bind(this));
 		
@@ -81,11 +81,12 @@ class Pile extends DisplayedEntity {
 		if (this.isDragged) 
 		{
 			this.updateDraggingCoord();
-		}		
+		}
 		
 		if (this.borderCountdown == 0)
 		{
 			this.removeBorder();
+			this.borderCountdown--;
 		}
 		
 		if (this.borderCountdown >= 0) {
@@ -93,14 +94,14 @@ class Pile extends DisplayedEntity {
 		}
 	}
 	
-	putBorder(id)
+	putBorder(id, length)
 	{		
 		let color = new Random(id).generateColor();
 		
 		this.image.style.boxShadow = "0px 0px " + Pile.borderWidth + "px " + (Pile.borderWidth / 2) + "px rgb(" + color.r + ", " + color.g + ", " + color.b + ")";
 		this.image.style.backgroundColor = "rgb(" + color.r + ", " + color.g + ", " + color.b + ")";
 		
-		this.borderCountdown = 50;
+		this.borderCountdown = length == undefined ? 50 : length;
 	}
 	
 	removeBorder()
@@ -111,8 +112,8 @@ class Pile extends DisplayedEntity {
 	
 	updateDraggingCoord() 
 	{
-		this.setX(this.mouseX - (Card.width / 2));
-		this.setY(this.mouseY - (Card.height / 2) + Pile.borderWidth + Pile.offsetY);
+		this.setCenteredX(this.mouseX);
+		this.setCenteredY(this.mouseY);
 	}
 	
 	doDragUpdate(event) 
@@ -155,8 +156,13 @@ class Pile extends DisplayedEntity {
 		
 		if (pile == null) 
 		{
+			if (this.getState().hand.isAround(event.clientX, event.clientY, 20))
+			{
+				this.putBack();
+			} 
+				
 			this.getState().addChange("putDownPile", "selection", this.id, {x: this.getCardX(), y: this.getCardY()}, true);
-		} 
+		}
 		else 
 		{
 			let cardIds = new Array();
@@ -342,8 +348,7 @@ class Pile extends DisplayedEntity {
 		this.getState().changeSelect(this);
 		this.getState().addChange("pickupPile", this.id, "selection", {x: this.getCardX(), y: this.getCardY()}, true);
 		
-		this.originalX = this.getCardX();
-		this.originalY= this.getCardY();
+		this.savePos();
 	}
 	
 	fuseOn(other)
@@ -356,9 +361,21 @@ class Pile extends DisplayedEntity {
 		}
 		else
 		{
-			this.setX(this.originalX + Pile.offsetX);
-			this.setY(this.originalY + Pile.borderWidth + Pile.offsetY);
+			this.putBack();
+			this.updateSprite();
 		}
+	}
+	
+	savePos()
+	{
+		this.originalX = this.getCardX();
+		this.originalY= this.getCardY();
+	}
+	
+	putBack()
+	{
+		this.setX(this.originalX);
+		this.setY(this.originalY);
 	}
 	
 	getIntersectedPercent(card) {
@@ -393,5 +410,25 @@ class Pile extends DisplayedEntity {
 	setY(y)
 	{
 		super.setY(y - Pile.borderWidth - Pile.offsetY);
+	}
+	
+	getCenteredX()
+	{
+		return this.getX() + Pile.offsetX + (Card.width / 2);
+	}
+	
+	getCenteredY()
+	{
+		return this.getY() + (Card.height / 2);
+	}
+	
+	setCenteredX(x)
+	{
+		this.setX(x - (Card.width / 2));
+	}
+	
+	setCenteredY(y)
+	{
+		this.setY(y - (Card.height / 2) + Pile.borderWidth + Pile.offsetY);
 	}
 }
