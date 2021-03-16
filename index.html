@@ -3,19 +3,95 @@
 	<head>
 		<meta charset="UTF-8"/>
 		<title>Jeu de Mao en ligne</title>
-		<style>html *{font-family: Tahoma !important;}</style>
+		<style>
+			html *{
+				font-family: Tahoma !important;
+			}
+
+			body {
+			    text-align: center;
+				background-image: url(assets/background.png);
+			    background-repeat: repeat;
+				background-size: 400px;
+			}
+
+			#loginText {
+				font-size: xxx-large;
+				color: #FFFFFF;
+			}
+
+			#logo {
+				width: 400px;
+				padding: 40px;
+			}
+
+			#login input[type=button]{
+				background-color: #AA2211;
+				border: none;
+				color: white;
+				padding: 15px 30px;
+				text-decoration: none;
+				margin: 4px 2px;
+				cursor: pointer;
+				font-size: xx-large;
+			}
+
+			#login input[type=text] {
+			    width: 30%;
+			    padding: 10px 20px;
+			    margin: 8px 0;
+			    box-sizing: border-box;
+				font-size: x-large;
+			}
+			
+			#loginError {
+				font-size: 180%;
+				color: #EE0000;
+			}
+			
+			.error {
+				animation-name: error;
+				animation-duration: 0.8s;
+			}
+			
+			#signature {
+				font-size: medium;
+				color: #FFFFFF;
+				position: absolute;
+				bottom: 0px;
+				padding: 10px;
+			}
+			
+			@keyframes error {
+				0% {font-size: 180%;}
+				50% {font-size: 230%;}
+				100% {font-size: 180%;}
+			}
+
+		</style>
 	</head>
 	<body>
+		<div id="login">
+			<img id="logo" src="assets/logo.png" alt="logo">
+			<br>
+		        <label id="loginText">Entrez votre pseudonyme:</label>
+		        <br>
+				<div id="loginError"></div>
+		        <input type="text" id="loginInput" name="fname">
+		        <br>
+		        <input type="button" id="loginPress" value="Valider">
+				<div id="signature">Crée par Isaac Lluís et Louis Parent</div>
+		</div>
 		<!-- engineScript Core -->
-        <script src="engine/GameScript.js" defer></script>
-        <script src="engine/State/States.js" defer></script>
-        <script src="engine/Graphics/Entity/Entity.js" defer></script>
-        <script src="engine/State/BasicState.js" defer></script>
-        <script src="engine/Graphics/Entity/DisplayedEntity.js" defer></script>
-        <script src="engine/Graphics/Entity/TexturedEntity.js" defer></script>
-        <script src="engine/Graphics/Entity/Button.js" defer></script>
-        <script src="engine/Graphics/Camera/Camera.js" defer></script>
-        <script src="engine/Graphics/Layer.js" defer></script>
+		<script src="engine/GameScript.js" defer></script>
+		<script src="engine/State/States.js" defer></script>
+		<script src="engine/Graphics/Entity/Entity.js" defer></script>
+		<script src="engine/State/BasicState.js" defer></script>
+		<script src="engine/Graphics/Entity/DisplayedEntity.js" defer></script>
+		<script src="engine/Graphics/Entity/TexturedEntity.js" defer></script>
+		<script src="engine/Graphics/Entity/Button.js" defer></script>
+		<script src="engine/Graphics/Camera/Camera.js" defer></script>
+		<script src="engine/Graphics/Layer.js" defer></script>
 		
 		<!-- engine main script -->
 		<script src="game/Random.js" defer></script>
